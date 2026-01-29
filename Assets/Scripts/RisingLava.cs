@@ -19,4 +19,12 @@ public class RisingLava : MonoBehaviour
     {
         shouldRise = true;
     }
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            GameManager.Instance.Lose();
+        }
+    }
+
 }

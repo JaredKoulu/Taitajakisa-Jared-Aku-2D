@@ -9,7 +9,7 @@ public class LavaTrigger : MonoBehaviour
         if (collision.CompareTag("Player"))
         {
             lava.StartRising();
-            Destroy(gameObject); // est‰‰ triggerin uudelleen aktivoitumisen
+            gameObject.SetActive(false);
         }
     }
 }

@@ -24,7 +24,6 @@ public class PlayerController : MonoBehaviour
     public bool speedBoost = false;
     private float boostTimer = 0f;
 
-    // --- Slow (SpiderWeb) ---
     private Coroutine slowCoroutine;
     private float speedMultiplier = 1f;
 
@@ -67,7 +66,6 @@ public class PlayerController : MonoBehaviour
         Move();
     }
 
-    // ================= INPUT =================
     void ReadInput()
     {
         moveInput = Vector2.zero;
@@ -75,7 +73,6 @@ public class PlayerController : MonoBehaviour
         if (Keyboard.current.dKey.isPressed) moveInput.x = 1;
     }
 
-    // ================= MOVE =================
     void Move()
     {
         if (isWallJumping || speedBoost) return;
@@ -86,7 +83,6 @@ public class PlayerController : MonoBehaviour
         );
     }
 
-    // ================= GROUND =================
     void CheckGround()
     {
         isGrounded = Physics2D.OverlapCircle(
@@ -96,7 +92,6 @@ public class PlayerController : MonoBehaviour
         );
     }
 
-    // ================= WALL =================
     void CheckWall()
     {
         if (isGrounded)
@@ -121,7 +116,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // ================= JUMP =================
     void HandleJump()
     {
         if (!Keyboard.current.spaceKey.wasPressedThisFrame) return;
@@ -160,7 +154,6 @@ public class PlayerController : MonoBehaviour
             isWallJumping = false;
     }
 
-    // ================= SPEED BOOST =================
     public void StartSpeedBoost(float duration)
     {
         speedBoost = true;
@@ -176,7 +169,6 @@ public class PlayerController : MonoBehaviour
             speedBoost = false;
     }
 
-    // ================= SLOW (SpiderWeb) =================
     public void ApplySlow(float multiplier, float duration)
     {
         if (slowCoroutine != null)
@@ -195,7 +187,6 @@ public class PlayerController : MonoBehaviour
         speedMultiplier = originalMultiplier;
     }
 
-    // ================= ANIM =================
     void UpdateAnimations()
     {
         animator.SetFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
@@ -205,5 +196,12 @@ public class PlayerController : MonoBehaviour
 
         if (moveInput.x != 0)
             spriteRenderer.flipX = moveInput.x < 0;
+    }
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Lava"))
+        {
+            Time.timeScale = 0f;
+        }
     }
 }
