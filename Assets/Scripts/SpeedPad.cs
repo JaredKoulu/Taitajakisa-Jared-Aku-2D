@@ -2,27 +2,34 @@ using UnityEngine;
 
 public class SpeedPad : MonoBehaviour
 {
-    public float upForce;
-    public float forwardForce;
+    public float upForce;       // ylöspäin
+    public float forwardForce;   // eteenpäin
 
-    //private Player player;
-
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.gameObject.tag == "Player")
+        if (collision.CompareTag("Player"))
         {
-            //player = collision.gameObject.GetComponent<Player>();
-            //player.speedBoost = true;
+            PlayerController player = collision.GetComponent<PlayerController>();
+            if (player != null) player.speedBoost = true;
 
-            Rigidbody2D rb = collision.transform.GetComponent<Rigidbody2D>();
-            rb.AddForce(new Vector2(forwardForce, upForce), ForceMode2D.Impulse);
+            Rigidbody2D rb = collision.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                // Säilytetään vaakaliike, nollataan vain pystysuora
+                float currentX = rb.linearVelocity.x;
+                rb.linearVelocity = new Vector2(currentX, 0f);
 
-            Invoke("DisableSpeedBoost", 0.3f);
+                // Lisätään voima ylöspäin ja eteenpäin
+                rb.AddForce(new Vector2(forwardForce, upForce), ForceMode2D.Impulse);
+            }
+
+            Invoke(nameof(DisableSpeedBoost), 0.3f);
         }
     }
 
     void DisableSpeedBoost()
     {
-        //player.speedBoost = false;
+        PlayerController player = GameObject.FindWithTag("Player").GetComponent<PlayerController>();
+        if (player != null) player.speedBoost = false;
     }
 }

@@ -36,6 +36,8 @@ public class PlayerController : MonoBehaviour
     private float wallJumpTimer;
     public float wallJumpDuration = 0.25f;
 
+    public bool speedBoost;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -66,8 +68,10 @@ public class PlayerController : MonoBehaviour
 
     void Move()
     {
-        if (isWallJumping) return; 
-        rb.linearVelocity = new Vector2(moveInput.x * moveSpeed, rb.linearVelocity.y);
+        if (isWallJumping) return;
+
+        if (!speedBoost)
+            rb.linearVelocity = new Vector2(moveInput.x * moveSpeed, rb.linearVelocity.y);
     }
 
     void CheckGround()
