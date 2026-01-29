@@ -13,54 +13,28 @@ public class PlayerController : MonoBehaviour
     public float groundCheckRadius = 0.2f;
     public LayerMask groundLayer;
 
-    [Header("Wall Jump")]
-    public float wallJumpForceX = 8f;
-    public float wallJumpForceY = 12f;
-    public float wallCheckDistance = 0.4f;
-    public LayerMask wallLayer;
-    public float wallJumpCooldown = 0.2f;
-
     private Rigidbody2D rb;
-    private Animator animator;
-    private SpriteRenderer spriteRenderer;
-
     private Vector2 moveInput;
+
     private bool isGrounded;
 
-    private bool isTouchingWall;
-    private int wallDirection;
-    private int lastWallDirection;
-    private float lastWallTouchTime;
-
-    private bool isWallJumping;
-    private float wallJumpTimer;
-    public float wallJumpDuration = 0.25f;
-
-    private bool isSlowed = false; // hidastus
-    private float slowTimer = 0f;
+    // Spider web slow
+    private bool isSlowed;
+    private float slowMultiplier = 1f;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        animator = GetComponentInChildren<Animator>();
-        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     void Update()
     {
         ReadInput();
         CheckGround();
-        CheckWall();
-        HandleJump();
-        UpdateWallJumpTimer();
-        UpdateAnimations();
 
-        // hidastuksen päivitys
-        if (isSlowed)
+        if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
         {
-            slowTimer -= Time.deltaTime;
-            if (slowTimer <= 0)
-                isSlowed = false;
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         }
     }
 
@@ -71,142 +45,46 @@ public class PlayerController : MonoBehaviour
 
     void ReadInput()
     {
-        moveInput = Vector2.zero;
+        moveInput.x = 0;
         if (Keyboard.current.aKey.isPressed) moveInput.x = -1;
         if (Keyboard.current.dKey.isPressed) moveInput.x = 1;
     }
 
     void Move()
     {
-        if (isWallJumping) return;
-
-        float currentSpeed = moveSpeed;
-        if (isSlowed)
-            currentSpeed *= 0.5f; // hidastus 50%
-
-        rb.linearVelocity = new Vector2(moveInput.x * currentSpeed, rb.linearVelocity.y);
+        float speed = moveSpeed * slowMultiplier;
+        rb.linearVelocity = new Vector2(moveInput.x * speed, rb.linearVelocity.y);
     }
 
     void CheckGround()
     {
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-    }
-
-    void CheckWall()
-    {
-        if (isGrounded)
-        {
-            isTouchingWall = false;
-            return;
-        }
-
-        RaycastHit2D hitLeft = Physics2D.Raycast(transform.position, Vector2.left, wallCheckDistance, wallLayer);
-        RaycastHit2D hitRight = Physics2D.Raycast(transform.position, Vector2.right, wallCheckDistance, wallLayer);
-
-        if (hitLeft)
-        {
-            isTouchingWall = true;
-            wallDirection = -1;
-            lastWallDirection = -1;
-            lastWallTouchTime = Time.time;
-        }
-        else if (hitRight)
-        {
-            isTouchingWall = true;
-            wallDirection = 1;
-            lastWallDirection = 1;
-            lastWallTouchTime = Time.time;
-        }
-        else
-        {
-            isTouchingWall = false;
-        }
-
-        Debug.DrawRay(transform.position, Vector2.left * wallCheckDistance, Color.red);
-        Debug.DrawRay(transform.position, Vector2.right * wallCheckDistance, Color.blue);
-    }
-
-    void HandleJump()
-    {
-        if (!Keyboard.current.spaceKey.wasPressedThisFrame) return;
-
-        if (isGrounded)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-        }
-        else if (isTouchingWall && Time.time - lastWallTouchTime <= 0.15f)
-        {
-            PerformWallJump();
-        }
-    }
-
-    void PerformWallJump()
-    {
-        isWallJumping = true;
-        wallJumpTimer = wallJumpDuration;
-
-        rb.linearVelocity = Vector2.zero;
-
-        Vector2 force = new Vector2(
-            -lastWallDirection * wallJumpForceX,
-            wallJumpForceY
+        isGrounded = Physics2D.OverlapCircle(
+            groundCheck.position,
+            groundCheckRadius,
+            groundLayer
         );
-
-        rb.AddForce(force, ForceMode2D.Impulse);
     }
 
-    void UpdateWallJumpTimer()
-    {
-        if (!isWallJumping) return;
+    // =========================
+    // TRIGGER-KUTSUT
+    // =========================
 
-        wallJumpTimer -= Time.deltaTime;
-        if (wallJumpTimer <= 0)
-            isWallJumping = false;
-    }
-
-    void UpdateAnimations()
-    {
-        animator.SetFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
-        animator.SetBool("IsGrounded", isGrounded);
-        animator.SetBool("IsWallJumping", isWallJumping);
-
-        bool isTouchingWallAnim = isTouchingWall && !isGrounded;
-        animator.SetBool("IsTouchingWall", isTouchingWallAnim);
-
-        if (moveInput.x != 0)
-        {
-            spriteRenderer.flipX = moveInput.x < 0;
-        }
-        else if (isTouchingWallAnim)
-        {
-            spriteRenderer.flipX = wallDirection > 0;
-        }
-    }
-
-    // ----------------------
-    // Näitä kutsutaan triggeristä
-    // ----------------------
-
+    // SpeedPad
     public void ApplySpeedBoost(float forwardForce, float upForce)
     {
-        rb.linearVelocity = new Vector2(forwardForce, upForce);
+        rb.AddForce(new Vector2(forwardForce, upForce), ForceMode2D.Impulse);
     }
 
-    public void ApplySlow(float slowMultiplier, float duration)
+    // SpiderWeb
+    public void ApplySlow(float multiplier, float duration)
     {
-        StartCoroutine(SlowRoutine(slowMultiplier, duration));
+        StartCoroutine(SlowRoutine(multiplier, duration));
     }
 
-    private IEnumerator SlowRoutine(float slowMultiplier, float duration)
+    IEnumerator SlowRoutine(float multiplier, float duration)
     {
-        float originalSpeed = moveSpeed;
-        moveSpeed *= slowMultiplier;   // hidastetaan
-        isSlowed = true;
-        slowTimer = duration;
-
+        slowMultiplier = multiplier;
         yield return new WaitForSeconds(duration);
-
-        moveSpeed = originalSpeed;     // palautetaan normaali nopeus
-        isSlowed = false;
+        slowMultiplier = 1f;
     }
 }
