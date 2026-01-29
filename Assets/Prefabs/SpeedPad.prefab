@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7903165217998121643}
   - component: {fileID: 4561110565555641867}
+  - component: {fileID: 8005119208178052566}
   m_Layer: 0
   m_Name: SpeedPad
   m_TagString: Untagged
@@ -91,3 +92,17 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &8005119208178052566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 996922006560664389}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab093ac467a00094db6a445e393ac237, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpeedPad
+  upForce: 0
+  forwardForce: 0
