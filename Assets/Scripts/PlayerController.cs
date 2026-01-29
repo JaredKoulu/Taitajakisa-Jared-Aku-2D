@@ -4,38 +4,29 @@ using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("Movement")]
     public float moveSpeed = 8f;
     public float jumpForce = 12f;
-
-    [Header("Ground Check")]
     public Transform groundCheck;
     public float groundCheckRadius = 0.2f;
     public LayerMask groundLayer;
-
-    [Header("Wall Jump")]
     public float wallJumpForceX = 8f;
     public float wallJumpForceY = 12f;
     public float wallCheckDistance = 0.4f;
     public LayerMask wallLayer;
     public float wallJumpDuration = 0.25f;
-
-    [Header("Speed Boost")]
     public bool speedBoost = false;
     private float boostTimer = 0f;
-
-    private Coroutine slowCoroutine;
     private float speedMultiplier = 1f;
+    private float originalSpeedMultiplier = 1f;
+    private Coroutine slowRoutine;
 
     private Rigidbody2D rb;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
-
     private Vector2 moveInput;
     private bool isGrounded;
     private bool isTouchingWall;
     private int lastWallDirection;
-
     private bool isWallJumping;
     private float wallJumpTimer;
 
@@ -57,10 +48,6 @@ public class PlayerController : MonoBehaviour
         UpdateAnimations();
     }
 
-    public bool IsGrounded()
-    {
-        return isGrounded;
-    }
     void FixedUpdate()
     {
         Move();
@@ -76,20 +63,17 @@ public class PlayerController : MonoBehaviour
     void Move()
     {
         if (isWallJumping || speedBoost) return;
-
-        rb.linearVelocity = new Vector2(
-            moveInput.x * moveSpeed * speedMultiplier,
-            rb.linearVelocity.y
-        );
+        rb.linearVelocity = new Vector2(moveInput.x * moveSpeed * speedMultiplier, rb.linearVelocity.y);
     }
 
     void CheckGround()
     {
-        isGrounded = Physics2D.OverlapCircle(
-            groundCheck.position,
-            groundCheckRadius,
-            groundLayer
-        );
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+    }
+
+    public bool IsGrounded()
+    {
+        return isGrounded;
     }
 
     void CheckWall()
@@ -99,7 +83,6 @@ public class PlayerController : MonoBehaviour
             isTouchingWall = false;
             return;
         }
-
         if (Physics2D.Raycast(transform.position, Vector2.left, wallCheckDistance, wallLayer))
         {
             isTouchingWall = true;
@@ -119,7 +102,6 @@ public class PlayerController : MonoBehaviour
     void HandleJump()
     {
         if (!Keyboard.current.spaceKey.wasPressedThisFrame) return;
-
         if (isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
@@ -134,24 +116,16 @@ public class PlayerController : MonoBehaviour
     {
         isWallJumping = true;
         wallJumpTimer = wallJumpDuration;
-
         rb.linearVelocity = Vector2.zero;
-
-        Vector2 force = new Vector2(
-            -lastWallDirection * wallJumpForceX,
-            wallJumpForceY
-        );
-
+        Vector2 force = new Vector2(-lastWallDirection * wallJumpForceX, wallJumpForceY);
         rb.AddForce(force, ForceMode2D.Impulse);
     }
 
     void UpdateWallJumpTimer()
     {
         if (!isWallJumping) return;
-
         wallJumpTimer -= Time.deltaTime;
-        if (wallJumpTimer <= 0)
-            isWallJumping = false;
+        if (wallJumpTimer <= 0) isWallJumping = false;
     }
 
     public void StartSpeedBoost(float duration)
@@ -163,28 +137,24 @@ public class PlayerController : MonoBehaviour
     void UpdateBoostTimer()
     {
         if (!speedBoost) return;
-
         boostTimer -= Time.deltaTime;
-        if (boostTimer <= 0)
-            speedBoost = false;
+        if (boostTimer <= 0) speedBoost = false;
     }
 
     public void ApplySlow(float multiplier, float duration)
     {
-        if (slowCoroutine != null)
-            StopCoroutine(slowCoroutine);
-
-        slowCoroutine = StartCoroutine(SlowRoutine(multiplier, duration));
+        if (slowRoutine != null)
+            StopCoroutine(slowRoutine);
+        slowRoutine = StartCoroutine(SlowRoutine(multiplier, duration));
     }
 
     private IEnumerator SlowRoutine(float multiplier, float duration)
     {
-        float originalMultiplier = speedMultiplier;
-        speedMultiplier *= multiplier;
-
+        originalSpeedMultiplier = speedMultiplier;
+        speedMultiplier = multiplier;
         yield return new WaitForSeconds(duration);
-
-        speedMultiplier = originalMultiplier;
+        speedMultiplier = originalSpeedMultiplier;
+        slowRoutine = null;
     }
 
     void UpdateAnimations()
@@ -193,15 +163,6 @@ public class PlayerController : MonoBehaviour
         animator.SetBool("IsGrounded", isGrounded);
         animator.SetBool("IsWallJumping", isWallJumping);
         animator.SetBool("IsTouchingWall", isTouchingWall && !isGrounded);
-
-        if (moveInput.x != 0)
-            spriteRenderer.flipX = moveInput.x < 0;
-    }
-    void OnTriggerEnter2D(Collider2D other)
-    {
-        if (other.CompareTag("Lava"))
-        {
-            Time.timeScale = 0f;
-        }
+        if (moveInput.x != 0) spriteRenderer.flipX = moveInput.x < 0;
     }
 }
