@@ -17,17 +17,30 @@ public class PlayerController : MonoBehaviour
     public float wallJumpForceY = 12f;
     public float wallCheckDistance = 0.4f;
     public LayerMask wallLayer;
+    public float wallJumpCooldown = 0.2f;
+
+    private Rigidbody2D rb;
+    private Animator animator;
+    private SpriteRenderer spriteRenderer;
+
+    private Vector2 moveInput;
+    private bool isGrounded;
+
 
     private bool isTouchingWall;
     private int wallDirection;
+    private int lastWallDirection;
+    private float lastWallTouchTime;
 
-    private Rigidbody2D rb;
-    private Vector2 moveInput;
-    private bool isGrounded;
+    private bool isWallJumping;
+    private float wallJumpTimer;
+    public float wallJumpDuration = 0.25f;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponentInChildren<Animator>();
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     void Update()
@@ -36,85 +49,123 @@ public class PlayerController : MonoBehaviour
         CheckGround();
         CheckWall();
         HandleJump();
+        UpdateWallJumpTimer();
+        UpdateAnimations();
     }
 
     void FixedUpdate()
     {
         Move();
     }
-
     void ReadInput()
     {
         moveInput = Vector2.zero;
-
-        if (Keyboard.current.aKey.isPressed)
-            moveInput.x = -1;
-
-        if (Keyboard.current.dKey.isPressed)
-            moveInput.x = 1;
+        if (Keyboard.current.aKey.isPressed) moveInput.x = -1;
+        if (Keyboard.current.dKey.isPressed) moveInput.x = 1;
     }
 
     void Move()
     {
+        if (isWallJumping) return; 
         rb.linearVelocity = new Vector2(moveInput.x * moveSpeed, rb.linearVelocity.y);
+    }
+
+    void CheckGround()
+    {
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+    }
+
+    void CheckWall()
+    {
+        if (isGrounded)
+        {
+            isTouchingWall = false;
+            return;
+        }
+
+        RaycastHit2D hitLeft = Physics2D.Raycast(transform.position, Vector2.left, wallCheckDistance, wallLayer);
+        RaycastHit2D hitRight = Physics2D.Raycast(transform.position, Vector2.right, wallCheckDistance, wallLayer);
+
+        if (hitLeft)
+        {
+            isTouchingWall = true;
+            wallDirection = -1;
+            lastWallDirection = -1;
+            lastWallTouchTime = Time.time;
+        }
+        else if (hitRight)
+        {
+            isTouchingWall = true;
+            wallDirection = 1;
+            lastWallDirection = 1;
+            lastWallTouchTime = Time.time;
+        }
+        else
+        {
+            isTouchingWall = false;
+        }
+
+        // Debug
+        Debug.DrawRay(transform.position, Vector2.left * wallCheckDistance, Color.red);
+        Debug.DrawRay(transform.position, Vector2.right * wallCheckDistance, Color.blue);
     }
 
     void HandleJump()
     {
-        if (!Keyboard.current.spaceKey.wasPressedThisFrame)
-            return;
+        if (!Keyboard.current.spaceKey.wasPressedThisFrame) return;
 
         if (isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         }
-        else if (isTouchingWall)
+        else if (isTouchingWall && Time.time - lastWallTouchTime <= 0.15f) 
         {
-            rb.linearVelocity = new Vector2(
-                -wallDirection * wallJumpForceX,
-                wallJumpForceY
-            );
+            PerformWallJump();
         }
     }
 
-
-    void CheckGround()
+    void PerformWallJump()
     {
-        isGrounded = Physics2D.OverlapCircle(
-            groundCheck.position,
-            groundCheckRadius,
-            groundLayer
+        isWallJumping = true;
+        wallJumpTimer = wallJumpDuration;
+
+        rb.linearVelocity = Vector2.zero;
+
+        Vector2 force = new Vector2(
+            -lastWallDirection * wallJumpForceX,
+            wallJumpForceY
         );
+
+        rb.AddForce(force, ForceMode2D.Impulse);
     }
-    void CheckWall()
+
+    void UpdateWallJumpTimer()
     {
-        RaycastHit2D leftWall = Physics2D.Raycast(
-            transform.position,
-            Vector2.left,
-            wallCheckDistance,
-            wallLayer
-        );
+        if (!isWallJumping) return;
 
-        RaycastHit2D rightWall = Physics2D.Raycast(
-            transform.position,
-            Vector2.right,
-            wallCheckDistance,
-            wallLayer
-        );
+        wallJumpTimer -= Time.deltaTime;
+        if (wallJumpTimer <= 0)
+            isWallJumping = false;
+    }
 
-        if (leftWall)
+
+    void UpdateAnimations()
+    {
+        animator.SetFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
+        animator.SetBool("IsGrounded", isGrounded);
+        animator.SetBool("IsWallJumping", isWallJumping);
+
+        bool isTouchingWallAnim = isTouchingWall && !isGrounded;
+        animator.SetBool("IsTouchingWall", isTouchingWallAnim);
+
+        if (moveInput.x != 0)
         {
-            isTouchingWall = true;
-            wallDirection = -1;
+            spriteRenderer.flipX = moveInput.x < 0;
         }
-        else if (rightWall)
+        else if (isTouchingWallAnim)
         {
-            isTouchingWall = true;
-            wallDirection = 1;
-        }
-        else
-        {
-            isTouchingWall = false;
+
+            spriteRenderer.flipX = wallDirection > 0; 
         }
     }
 }
