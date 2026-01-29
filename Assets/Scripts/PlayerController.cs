@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -26,7 +27,6 @@ public class PlayerController : MonoBehaviour
     private Vector2 moveInput;
     private bool isGrounded;
 
-
     private bool isTouchingWall;
     private int wallDirection;
     private int lastWallDirection;
@@ -36,7 +36,8 @@ public class PlayerController : MonoBehaviour
     private float wallJumpTimer;
     public float wallJumpDuration = 0.25f;
 
-    public bool speedBoost;
+    private bool isSlowed = false; // hidastus
+    private float slowTimer = 0f;
 
     void Awake()
     {
@@ -53,12 +54,21 @@ public class PlayerController : MonoBehaviour
         HandleJump();
         UpdateWallJumpTimer();
         UpdateAnimations();
+
+        // hidastuksen päivitys
+        if (isSlowed)
+        {
+            slowTimer -= Time.deltaTime;
+            if (slowTimer <= 0)
+                isSlowed = false;
+        }
     }
 
     void FixedUpdate()
     {
         Move();
     }
+
     void ReadInput()
     {
         moveInput = Vector2.zero;
@@ -70,8 +80,11 @@ public class PlayerController : MonoBehaviour
     {
         if (isWallJumping) return;
 
-        if (!speedBoost)
-            rb.linearVelocity = new Vector2(moveInput.x * moveSpeed, rb.linearVelocity.y);
+        float currentSpeed = moveSpeed;
+        if (isSlowed)
+            currentSpeed *= 0.5f; // hidastus 50%
+
+        rb.linearVelocity = new Vector2(moveInput.x * currentSpeed, rb.linearVelocity.y);
     }
 
     void CheckGround()
@@ -109,7 +122,6 @@ public class PlayerController : MonoBehaviour
             isTouchingWall = false;
         }
 
-        // Debug
         Debug.DrawRay(transform.position, Vector2.left * wallCheckDistance, Color.red);
         Debug.DrawRay(transform.position, Vector2.right * wallCheckDistance, Color.blue);
     }
@@ -122,7 +134,7 @@ public class PlayerController : MonoBehaviour
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         }
-        else if (isTouchingWall && Time.time - lastWallTouchTime <= 0.15f) 
+        else if (isTouchingWall && Time.time - lastWallTouchTime <= 0.15f)
         {
             PerformWallJump();
         }
@@ -152,7 +164,6 @@ public class PlayerController : MonoBehaviour
             isWallJumping = false;
     }
 
-
     void UpdateAnimations()
     {
         animator.SetFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
@@ -168,8 +179,34 @@ public class PlayerController : MonoBehaviour
         }
         else if (isTouchingWallAnim)
         {
-
-            spriteRenderer.flipX = wallDirection > 0; 
+            spriteRenderer.flipX = wallDirection > 0;
         }
+    }
+
+    // ----------------------
+    // Näitä kutsutaan triggeristä
+    // ----------------------
+
+    public void ApplySpeedBoost(float forwardForce, float upForce)
+    {
+        rb.linearVelocity = new Vector2(forwardForce, upForce);
+    }
+
+    public void ApplySlow(float slowMultiplier, float duration)
+    {
+        StartCoroutine(SlowRoutine(slowMultiplier, duration));
+    }
+
+    private IEnumerator SlowRoutine(float slowMultiplier, float duration)
+    {
+        float originalSpeed = moveSpeed;
+        moveSpeed *= slowMultiplier;   // hidastetaan
+        isSlowed = true;
+        slowTimer = duration;
+
+        yield return new WaitForSeconds(duration);
+
+        moveSpeed = originalSpeed;     // palautetaan normaali nopeus
+        isSlowed = false;
     }
 }
